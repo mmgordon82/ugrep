@@ -1,20 +1,22 @@
-# step 1: create a debian or ubuntu container for ugrep named "ugrep"
-# docker -D build --no-cache -t ugrep .
+# Build the ugrep image
+#   $ docker build -t ugrep .
 #
-# step 2: run bash in the container, e.g. to run ugrep from the command line
-# docker run -it ugrep bash
-# or
-# docker run -it --mount type=bind,source=$PWD,target=/mnt ugrep bash
-#
-# step 3: run ugrep in the container, for example:
-# ugrep -r -n -tjava Hello ugrep/tests/
+# Execute ugrep in the container (mount the host / directory in the container /mnt directory)
+#   $ docker run -v /:/mnt -it ugrep --help
+# or run bash in the container instead:
+#   $ docker run --entrypoint /bin/bash -v /:/mnt -it ugrep
+#   $ ugrep --help
 
-# debian or ubuntu
 FROM ubuntu
 
 RUN apt-get update
 
-RUN apt-get install -y \
+RUN apt-get install -y --no-install-recommends \
+    autoconf \
+    automake \
+    build-essential \
+    ca-certificates \
+    pkg-config \
     make \
     vim \
     git \
@@ -29,9 +31,19 @@ RUN apt-get install -y \
     libzstd-dev \
     libbrotli-dev
 
-RUN cd / && \
-    git clone https://github.com/Genivia/ugrep
+WORKDIR /ugrep
 
-RUN cd ugrep && \
-    ./build.sh && \
-    make install
+# Clone ugrep from GitHub
+RUN git clone --single-branch --depth=1 https://github.com/Genivia/ugrep /ugrep
+
+# Local build of ugrep
+# If you want to build ugrep from a local source, uncomment the following line:
+# ADD . /ugrep
+
+# Statically build ugrep
+ENV CPPFLAGS="-DPCRE2_STATIC -static"
+RUN autoreconf -fi
+RUN ./build.sh --enable-static --without-brotli
+RUN make install
+
+ENTRYPOINT [ "ugrep" ]

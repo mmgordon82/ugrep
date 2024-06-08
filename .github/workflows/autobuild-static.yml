@@ -1,6 +1,12 @@
 name: Autobuild-Static
 
-on: [ push, pull_request ]
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "Version of the application"
+        required: true
+        type: string
 
 jobs:
   autobuild-static:
